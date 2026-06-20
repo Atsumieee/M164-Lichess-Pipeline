@@ -1,0 +1,139 @@
+import sql from "mssql";
+
+const config = {
+  server: process.env.DB_SERVER,
+  database: "master",
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  options: {
+    instanceName: process.env.DB_INSTANCE,
+    trustServerCertificate: true,
+    encrypt: false
+  }
+};
+
+// Function to test connection to the SQL-Server
+async function testConnection() {
+  try {
+    const pool = await sql.connect(config);
+    const result = await pool.request().query("SELECT SUSER_SNAME() AS who");
+    console.log("Connected as:", result.recordset[0].who);
+    await pool.close();
+  } catch (err) {
+    console.error("Connection failed:", err.message);
+  }
+}
+
+
+
+const DB_NAME = "LichessTournaments";
+
+// Shared connection settings for every connection we open
+const baseConfig = {
+  server: process.env.DB_SERVER,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  options: {
+    instanceName: process.env.DB_INSTANCE,
+    trustServerCertificate: true,
+    encrypt: false
+  }
+};
+
+// "master" always exists -> used to create or drop our own database
+const masterConfig = { ...baseConfig, database: "master" };
+// Our project database -> used to build the tables inside it
+const appConfig = { ...baseConfig, database: DB_NAME };
+
+// Drop children first (reverse FK order), then create parents first
+const schemaSql = `
+DROP TABLE IF EXISTS standing;
+DROP TABLE IF EXISTS game;
+DROP TABLE IF EXISTS player;
+DROP TABLE IF EXISTS tournament;
+
+CREATE TABLE tournament (
+  tournament_id NVARCHAR(20) PRIMARY KEY,
+  name NVARCHAR(255),
+  system NVARCHAR(20),
+  start_time DATETIME2,
+  player_count INT
+);
+
+CREATE TABLE player (
+  player_id NVARCHAR(50) PRIMARY KEY,
+  username NVARCHAR(50),
+  title NVARCHAR(10) NULL
+);
+
+CREATE TABLE game (
+  game_id NVARCHAR(20) PRIMARY KEY,
+  tournament_id NVARCHAR(20) NOT NULL,
+  white_id NVARCHAR(50) NOT NULL,
+  black_id NVARCHAR(50) NOT NULL,
+  winner NVARCHAR(10) NULL,
+  opening NVARCHAR(255) NULL,
+  move_count INT NULL,
+  CONSTRAINT fk_game_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(tournament_id),
+  CONSTRAINT fk_game_white FOREIGN KEY (white_id) REFERENCES player(player_id),
+  CONSTRAINT fk_game_black FOREIGN KEY (black_id) REFERENCES player(player_id)
+);
+
+CREATE TABLE standing (
+  tournament_id NVARCHAR(20) NOT NULL,
+  player_id NVARCHAR(50) NOT NULL,
+  [rank] INT,
+  points INT,
+  CONSTRAINT pk_standing PRIMARY KEY (tournament_id, player_id),
+  CONSTRAINT fk_standing_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(tournament_id),
+  CONSTRAINT fk_standing_player FOREIGN KEY (player_id) REFERENCES player(player_id)
+);
+`;
+
+// Create the database (if missing) and build a fresh set of tables
+async function setupDatabase() {
+  // Step 1: ensure the database exists -> talk to master for this
+  const masterPool = new sql.ConnectionPool(masterConfig);
+  await masterPool.connect();
+  await masterPool.request().batch(
+    `IF DB_ID('${DB_NAME}') IS NULL CREATE DATABASE ${DB_NAME}`
+  );
+  await masterPool.close();
+
+  // Step 2: build the tables inside our own database
+  const appPool = new sql.ConnectionPool(appConfig);
+  await appPool.connect();
+  await appPool.request().batch(schemaSql);
+  await appPool.close();
+
+  console.log(`Database '${DB_NAME}' is ready with a fresh schema.`);
+}
+
+// Drop the whole database -> leaves no trace behind
+async function teardownDatabase() {
+  const masterPool = new sql.ConnectionPool(masterConfig);
+  await masterPool.connect();
+  await masterPool.request().batch(`
+    IF DB_ID('${DB_NAME}') IS NOT NULL
+    BEGIN
+      ALTER DATABASE ${DB_NAME} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+      DROP DATABASE ${DB_NAME};
+    END
+  `);
+  await masterPool.close();
+
+  console.log(`Database '${DB_NAME}' removed.`);
+}
+
+// Pick the action from the command-line argument
+const command = process.argv[2];
+
+try {
+  if (command === "teardown") {
+    await teardownDatabase();
+  } else {
+    await setupDatabase();
+  }
+} catch (error) {
+  console.error("Operation failed:", error.message);
+}
