@@ -33,4 +33,60 @@ async function fetchGames(tournamentId) {
   return parseNdjson(text);
 }
 
-export { fetchStandings, fetchGames };
+
+
+// Transform raw API data of one tournament into flat table rows
+function transformTournament(tournamentMeta, standings, games) {
+  // player are deduplicated by id across both sources
+  const players = new Map();
+
+  // Collect players from the standing
+  for (const entry of standings) {
+    const id = entry.username?.toLowerCase();
+    players.set(id, {player_id: id, username: entry.username, title: entry.title ?? null});    
+  }
+
+  // Build standing rows (one per player in this tournament)
+  const standingRows = standings.map(entry => ({
+    tournament_id: tournamentMeta.tournament_id,
+    player_id: entry.username.toLowerCase(),
+    rank: entry.rank,
+    points: entry.score
+  }));
+
+  const gameRows= [];
+  for (const game of games) {
+    const whiteName = game.players?.white?.user?.name;
+    const blackName = game.players?.black?.user?.name;
+
+    if (!whiteName || !blackName) continue;
+
+    const whiteId = whiteName.toLowerCase();
+    const blackId = blackName.toLowerCase();
+
+    if (!players.has(whiteId)) players.set(whiteId, { player_id: whiteId, username: whiteName, title: null});
+    if (!players.has(blackId)) players.set(blackId, { player_id: blackId, username: blackName, title: null});
+
+
+    gameRows.push({
+      game_id: game.id,
+      tournament_id: tournamentMeta.tournament_id,
+      white_id: whiteId,
+      black_id: blackId,
+      winner: game.winner ?? "draw",
+      opening: game.opening?.name ?? null,
+      move_count: game.moves ? game.moves.split(" ").length : 0
+    });
+  }
+
+  return {
+    players: [...players.values()],
+    standings: standingRows,
+    games: gameRows
+  }
+
+};
+
+
+
+export { fetchStandings, fetchGames, transformTournament };
