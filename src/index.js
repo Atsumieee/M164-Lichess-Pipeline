@@ -2,7 +2,7 @@ import { fetchStandings, fetchGames, transformTournament } from "./lichess.js";
 import { writeCsv } from "./csv.js";
 
 const TEST_ID = "ZucVODJj";
-const OUTPUT_DIR = "C:\\Users\\Public\\Projects\\Lichess-Pipeline\\data";
+const OUTPUT_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data";
 
 const standings = await fetchStandings(TEST_ID);
 const games = await fetchGames(TEST_ID);

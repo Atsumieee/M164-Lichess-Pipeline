@@ -146,7 +146,7 @@ async function bulkLoad(pool, table, filePath) {
 
 
 
-const DATA_DIR = "C:\\Users\\Public\\Projects\\Lichess-Pipeline\\data"
+const DATA_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data"
 
 async function importData() {
 
