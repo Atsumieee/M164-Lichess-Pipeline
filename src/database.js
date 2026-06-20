@@ -125,15 +125,63 @@ async function teardownDatabase() {
   console.log(`Database '${DB_NAME}' removed.`);
 }
 
+
+async function bulkLoad(pool, table, filePath) {
+
+  const command = `
+    BULK INSERT ${table}
+    FROM '${filePath}'
+    WITH (
+      FORMAT = 'CSV',
+      FIRSTROW = 2,
+      FIELDQUOTE = '"',
+      FIELDTERMINATOR = ',',
+      ROWTERMINATOR = '0x0a',
+      CODEPAGE = '65001'
+    );
+  `;
+  await pool.request().batch(command);
+  console.log(`Loaded ${table} from ${filePath}`);
+};
+
+
+
+const DATA_DIR = "C:\\Users\\Public\\Projects\\Lichess-Pipeline\\data"
+
+async function importData() {
+
+  const pool = new sql.ConnectionPool(appConfig);
+  await pool.connect();
+
+  try{
+    await bulkLoad(pool, "tournament", `${DATA_DIR}\\tournament.csv`);
+    await bulkLoad(pool, "player", `${DATA_DIR}\\player.csv`);
+    await bulkLoad(pool, "game", `${DATA_DIR}\\game.csv`);
+    await bulkLoad(pool, "standing", `${DATA_DIR}\\standing.csv`);
+  } finally {
+    await pool.close();
+  }
+
+  console.log("Import complete.")
+  
+};
+
+
+
 // Pick the action from the command-line argument
 const command = process.argv[2];
 
 try {
   if (command === "teardown") {
     await teardownDatabase();
+  } else if (command === "import"){
+    await importData();
   } else {
     await setupDatabase();
   }
 } catch (error) {
   console.error("Operation failed:", error.message);
 }
+
+
+
