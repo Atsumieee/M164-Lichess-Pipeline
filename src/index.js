@@ -1,22 +1,16 @@
 import { fetchStandings, fetchGames, transformTournament } from "./lichess.js";
+import { writeCsv } from "./csv.js";
 
 const TEST_ID = "ZucVODJj";
+const OUTPUT_DIR = "C:\\Users\\Public\\Projects\\Lichess-Pipeline\\data";
 
 const standings = await fetchStandings(TEST_ID);
-console.log("Number of players:", standings.length);
-console.log("First standing:", standings[0]);
-
 const games = await fetchGames(TEST_ID);
-console.log("Number of games:", games.length);
-console.log("First game (white):", games[0].players.white.user.name);
-console.log("First game (winner):", games[0].winner);
-console.log("First game (opening):", games[0].opening?.name);
 
-const test = transformTournament({tournament_id: TEST_ID}, standings, games);
 
-console.log(standings.length + 2 * games.length);
+const result = transformTournament({tournament_id: TEST_ID}, standings, games);
 
-console.log(test.players.length);
-console.log(test.games.length);
-console.log(test.players[0]);
-console.log(test.games[0]);
+await writeCsv(OUTPUT_DIR, "player", result.players, ["player_id", "username", "title"]);
+await writeCsv(OUTPUT_DIR, "tournament", [{ tournament_id: TEST_ID, name: "Test", system: "arena", start_time: null, player_count: result.players.length}], ["tournament_id", "name", "system", "start_time", "player_count"]);
+await writeCsv(OUTPUT_DIR, "standing", result.standings, ["tournament_id", "player_id", "rank", "points"]);
+await writeCsv(OUTPUT_DIR, "game", result.games, ["game_id", "tournament_id", "white_id", "black_id", "winner", "opening", "move_count"]);
