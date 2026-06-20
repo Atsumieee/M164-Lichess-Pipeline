@@ -168,6 +168,48 @@ async function importData() {
 
 
 
+
+
+async function verifyData() {
+
+  const pool = new sql.ConnectionPool(appConfig);
+  await pool.connect()
+
+  try{
+
+    const result = await pool.request().query(`
+        SELECT TOP 5
+          t.name AS tournament,
+          w.username AS white_player,
+          b.username AS black_player,
+          g.winner,
+          g.opening
+        FROM game AS g
+        JOIN tournament AS t ON g.tournament_id = t.tournament_id
+        JOIN player w ON g.white_id = w.player_id
+        JOIN player b ON g.black_id = b.player_id;
+      `);
+    console.table(result.recordset);
+
+    const orphans = await pool.request().query(`
+        SELECT COUNT(*) AS orphan_games
+        FROM game AS g
+        LEFT JOIN player AS p ON g.white_id = p.player_id
+        WHERE p.player_id IS NULL;
+      `);
+
+      console.log("Games with a missing white player:", orphans.recordset[0].orphan_games);
+
+
+  } finally {
+    await pool.close;
+  }
+
+};
+
+
+
+
 // Pick the action from the command-line argument
 const command = process.argv[2];
 
@@ -176,6 +218,8 @@ try {
     await teardownDatabase();
   } else if (command === "import"){
     await importData();
+  } else  if (command === "verify"){
+    await verifyData();
   } else {
     await setupDatabase();
   }
