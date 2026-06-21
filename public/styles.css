@@ -114,6 +114,15 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.02em; }
 .panel__head h2 { font-size: 1.05rem; }
 .panel__head .hint { color: var(--muted); font-size: 0.85rem; }
 
+/* Quiet footer for secondary / destructive actions, set apart by a hairline */
+.panel__foot {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* ---- Buttons ----------------------------------------------------------- */
 .btn {
   font: inherit;
