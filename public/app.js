@@ -16,7 +16,8 @@ function renderList(elementId, rows, labelKey) {
   container.innerHTML = `<ul>${items}</ul>`;
 }
 
-async function init() {
+// Load all three dashboard statistics (reusable: on startup AND after import)
+async function loadStats() {
   try {
     const winners = await loadData("/api/stats/winners");
     renderList("winners", winners, "winner");
@@ -31,9 +32,9 @@ async function init() {
   }
 }
 
-init();
-
-
+function init() {
+  loadStats();
+}
 
 // Load the finished-tournament list and show it with checkboxes
 async function loadTournaments() {
@@ -60,3 +61,33 @@ async function loadTournaments() {
 }
 
 document.getElementById("load-tournaments").addEventListener("click", loadTournaments);
+
+
+// Collect checked tournament IDs and send them to the import route
+async function importSelected() {
+  const checked = document.querySelectorAll("#tournament-list input:checked");
+  const ids = [...checked].map(box => box.value);
+
+  const status = document.getElementById("import-status");
+  if (ids.length === 0) {
+    status.textContent = "Bitte mindestens ein Turnier auswählen.";
+    return;
+  }
+
+  status.textContent = `Importiere ${ids.length} Turnier(e)... das kann dauern.`;
+  try {
+    const response = await fetch("/api/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids })
+    });
+    if (!response.ok) throw new Error(`Status ${response.status}`);
+    const summary = await response.json();
+    status.textContent = `Fertig: ${summary.tournaments} Turniere, ${summary.players} Spieler, ${summary.games} Partien.`;
+    await loadStats();   // refresh the dashboard with the new data
+  } catch (error) {
+    status.textContent = `Fehler: ${error.message}`;
+  }
+}
+
+document.getElementById("import-selected").addEventListener("click", importSelected);

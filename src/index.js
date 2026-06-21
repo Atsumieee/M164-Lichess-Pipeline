@@ -1,16 +1,28 @@
-import { fetchStandings, fetchGames, transformTournament } from "./lichess.js";
-import { writeCsv } from "./csv.js";
+import { setupDatabase, teardownDatabase, verifyData, exportData } from "./database.js";
+import { runImport } from "./pipeline.js";
 
-const TEST_ID = "ZucVODJj";
-const OUTPUT_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data";
+const command = process.argv[2];
+const ids = process.argv.slice(3);   // everything after the command = tournament IDs
 
-const standings = await fetchStandings(TEST_ID);
-const games = await fetchGames(TEST_ID);
-
-
-const result = transformTournament({tournament_id: TEST_ID}, standings, games);
-
-await writeCsv(OUTPUT_DIR, "player", result.players, ["player_id", "username", "title"]);
-await writeCsv(OUTPUT_DIR, "tournament", [{ tournament_id: TEST_ID, name: "Test", system: "arena", start_time: null, player_count: result.players.length}], ["tournament_id", "name", "system", "start_time", "player_count"]);
-await writeCsv(OUTPUT_DIR, "standing", result.standings, ["tournament_id", "player_id", "rank", "points"]);
-await writeCsv(OUTPUT_DIR, "game", result.games, ["game_id", "tournament_id", "white_id", "black_id", "winner", "opening", "move_count"]);
+try {
+  if (command === "setup") {
+    await setupDatabase();
+  } else if (command === "teardown") {
+    await teardownDatabase();
+  } else if (command === "import") {
+    if (ids.length === 0) {
+      console.error("Usage: import <tournamentId> [<tournamentId> ...]");
+    } else {
+      const summary = await runImport(ids);
+      console.log("Import done:", summary);
+    }
+  } else if (command === "verify") {
+    await verifyData();
+  } else if (command === "export") {
+    await exportData();
+  } else {
+    console.log("Commands: setup | teardown | import <ids...> | verify | export");
+  }
+} catch (error) {
+  console.error("Operation failed:", error.message);
+}

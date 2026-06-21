@@ -1,6 +1,7 @@
 import express from "express";
 import { getOpeningStats, getWinnerStats, getTopPlayers } from "./queries.js";
 import { fetchTournamentList } from "./lichess.js";
+import { runImport } from "./pipeline.js";
 
 const app = express();
 const PORT = 3000;
@@ -53,5 +54,24 @@ app.get("/api/tournaments", async (request, response) => {
   } catch (error) {
     console.error(error.message);
     response.status(500).json({ error: "Could not load tournaments" });
+  }
+});
+
+
+
+// Allow the server to read JSON bodies from POST requests
+app.use(express.json());
+
+app.post("/api/import", async (request, response) => {
+  const ids = request.body.ids;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return response.status(400).json({ error: "No tournament IDs provided" });
+  }
+  try {
+    const summary = await runImport(ids);
+    response.json(summary);
+  } catch (error) {
+    console.error(error.message);
+    response.status(500).json({ error: "Import failed" });
   }
 });

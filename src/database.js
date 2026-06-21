@@ -1,6 +1,8 @@
 import sql from "mssql";
 import { exportToXlsx } from "./export.js";
 
+const DATA_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data"
+
 
 const config = {
   server: process.env.DB_SERVER,
@@ -128,11 +130,11 @@ async function teardownDatabase() {
 }
 
 
-async function bulkLoad(pool, table, filePath) {
-
+// Bulk load one CSV file into one table (server-side read)
+async function bulkLoad(pool, table, fileName) {
   const command = `
     BULK INSERT ${table}
-    FROM '${filePath}'
+    FROM '${DATA_DIR}\\${fileName}'
     WITH (
       FORMAT = 'CSV',
       FIRSTROW = 2,
@@ -143,31 +145,23 @@ async function bulkLoad(pool, table, filePath) {
     );
   `;
   await pool.request().batch(command);
-  console.log(`Loaded ${table} from ${filePath}`);
-};
+  console.log(`Loaded ${table}`);
+}
 
-
-
-const DATA_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data"
-
-async function importData() {
-
+// Load all four CSV files in dependency order (parents before children)
+async function bulkLoadCsvs() {
   const pool = new sql.ConnectionPool(appConfig);
   await pool.connect();
-
-  try{
-    await bulkLoad(pool, "tournament", `${DATA_DIR}\\tournament.csv`);
-    await bulkLoad(pool, "player", `${DATA_DIR}\\player.csv`);
-    await bulkLoad(pool, "game", `${DATA_DIR}\\game.csv`);
-    await bulkLoad(pool, "standing", `${DATA_DIR}\\standing.csv`);
+  try {
+    await bulkLoad(pool, "tournament", "tournament.csv");
+    await bulkLoad(pool, "player", "player.csv");
+    await bulkLoad(pool, "game", "game.csv");
+    await bulkLoad(pool, "standing", "standing.csv");
   } finally {
     await pool.close();
   }
-
-  console.log("Import complete.")
-  
-};
-
+  console.log("Import complete.");
+}
 
 
 
@@ -225,24 +219,7 @@ async function exportData() {
 }
 
 
-// Pick the action from the command-line argument
-const command = process.argv[2];
-
-try {
-  if (command === "teardown") {
-    await teardownDatabase();
-  } else if (command === "import"){
-    await importData();
-  } else  if (command === "verify"){
-    await verifyData();
-  } else if (command === "export" ){ 
-    await exportData();
-  } else {
-    await setupDatabase();
-  }
-} catch (error) {
-  console.error("Operation failed:", error.message);
-}
+export { setupDatabase, teardownDatabase, bulkLoadCsvs, verifyData, exportData };
 
 
 

@@ -98,6 +98,13 @@ async function fetchTournamentList() {
   return response.json();
 }
 
+// Fetch metadata about one arena tournament
+async function fetchTournamentInfo(tournamentId) {
+  const response = await fetch(`${API_BASE}/tournament/${tournamentId}`);
+  if (!response.ok) {
+    throw new Error(`Tournament info failed with status ${response.status}`);
+  }
+  return response.json();
+}
 
-
-export { fetchStandings, fetchGames, transformTournament, fetchTournamentList };
+export { fetchStandings, fetchGames, transformTournament, fetchTournamentList, fetchTournamentInfo };
