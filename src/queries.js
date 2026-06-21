@@ -57,4 +57,11 @@ async function getTopPlayers() {
   return result.recordset;
 }
 
-export { getOpeningStats, getWinnerStats, getTopPlayers };
+// Which tournaments are already in the database (to mark them in the UI)
+async function getImportedTournamentIds() {
+  const pool = await getPool();
+  const result = await pool.request().query(`SELECT tournament_id FROM tournament;`);
+  return result.recordset.map(row => row.tournament_id);
+}
+
+export { getOpeningStats, getWinnerStats, getTopPlayers, getImportedTournamentIds };

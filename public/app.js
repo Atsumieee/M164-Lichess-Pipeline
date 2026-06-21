@@ -136,7 +136,8 @@ const tournamentList = document.getElementById("tournament-list");
 const IMPORT_LABEL = "Ausgewählte importieren";
 
 function syncImportButton() {
-  const count = document.querySelectorAll("#tournament-list input:checked").length;
+  // Only newly selectable rows count; already-imported rows are locked
+  const count = document.querySelectorAll("#tournament-list input:checked:not(:disabled)").length;
   importBtn.disabled = count === 0;
   importBtn.textContent = count === 0 ? IMPORT_LABEL : `${IMPORT_LABEL} (${count})`;
 }
@@ -150,20 +151,28 @@ async function loadTournaments() {
     Array.from({ length: 4 }, () => `<li class="skeleton" style="height:2.6rem"></li>`).join("")
   }</ul>`;
   try {
-    const tournaments = await loadData("/api/tournaments");
+    const [tournaments, imported] = await Promise.all([
+      loadData("/api/tournaments"),
+      loadData("/api/imported")
+    ]);
     if (tournaments.length === 0) {
       container.innerHTML = `<p class="empty">Keine beendeten Turniere gefunden.</p>`;
       return;
     }
+    const importedSet = new Set(imported);
     container.innerHTML = `<ul class="tlist">${
-      tournaments.map(t => `
+      tournaments.map(t => {
+        const isImported = importedSet.has(t.id);
+        return `
         <li>
-          <label class="tlist__row">
-            <input type="checkbox" value="${t.id}">
+          <label class="tlist__row${isImported ? " tlist__row--imported" : ""}">
+            <input type="checkbox" value="${t.id}"${isImported ? " checked disabled" : ""}>
             <span class="tlist__name">${t.name}</span>
+            ${isImported ? `<span class="tlist__badge">importiert</span>` : ""}
             <span class="tlist__meta num">${fmt(t.players)} Spieler</span>
           </label>
-        </li>`).join("")
+        </li>`;
+      }).join("")
     }</ul>`;
     syncImportButton();
   } catch (error) {
@@ -172,7 +181,7 @@ async function loadTournaments() {
 }
 
 async function importSelected() {
-  const checked = document.querySelectorAll("#tournament-list input:checked");
+  const checked = document.querySelectorAll("#tournament-list input:checked:not(:disabled)");
   const ids = [...checked].map(box => box.value);
   const status = document.getElementById("import-status");
 

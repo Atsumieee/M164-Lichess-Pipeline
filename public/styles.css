@@ -212,13 +212,26 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.02em; }
   transition: border-color 140ms var(--ease-out), background-color 140ms var(--ease-out);
 }
 .tlist__row:hover { border-color: #3a4150; }
-.tlist__row:has(input:checked) {
+/* Highlight only fresh selections, not already-imported (locked) rows */
+.tlist__row:not(.tlist__row--imported):has(input:checked) {
   border-color: var(--brass);
   background: var(--brass-soft);
 }
+.tlist__row--imported { opacity: 0.6; cursor: default; }
 .tlist__row input { accent-color: var(--brass); width: 1.05em; height: 1.05em; flex: none; }
 .tlist__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tlist__meta { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); flex: none; }
+.tlist__badge {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--brass);
+  border: 1px solid rgba(198, 161, 91, 0.4);
+  border-radius: 99px;
+  padding: 0.1rem 0.5rem;
+}
 
 /* ---- Eval-bar (signature) --------------------------------------------- */
 .evalbar {

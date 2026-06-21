@@ -1,5 +1,5 @@
 import express from "express";
-import { getOpeningStats, getWinnerStats, getTopPlayers } from "./queries.js";
+import { getOpeningStats, getWinnerStats, getTopPlayers, getImportedTournamentIds } from "./queries.js";
 import { fetchTournamentList } from "./lichess.js";
 import { runImport } from "./pipeline.js";
 import { setupDatabase } from "./database.js";
@@ -55,6 +55,16 @@ app.get("/api/tournaments", async (request, response) => {
   } catch (error) {
     console.error(error.message);
     response.status(500).json({ error: "Could not load tournaments" });
+  }
+});
+
+// IDs of tournaments already imported (empty if nothing imported yet)
+app.get("/api/imported", async (request, response) => {
+  try {
+    response.json(await getImportedTournamentIds());
+  } catch (error) {
+    console.error(error.message);
+    response.json([]);   // no database/data yet -> nothing imported
   }
 });
 
