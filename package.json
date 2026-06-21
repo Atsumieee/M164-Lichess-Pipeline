@@ -12,6 +12,7 @@
   "type": "module",
   "dependencies": {
     "exceljs": "^3.4.0",
+    "express": "^5.2.1",
     "mssql": "^12.5.5"
   }
 }
