@@ -89,4 +89,15 @@ function transformTournament(tournamentMeta, standings, games) {
 
 
 
-export { fetchStandings, fetchGames, transformTournament };
+// Fetch the list of currently visible arena tournaments (finished/ongoing/upcoming)
+async function fetchTournamentList() {
+  const response = await fetch(`${API_BASE}/tournament`);
+  if (!response.ok) {
+    throw new Error(`Tournament list failed with status ${response.status}`);
+  }
+  return response.json();
+}
+
+
+
+export { fetchStandings, fetchGames, transformTournament, fetchTournamentList };

@@ -32,3 +32,31 @@ async function init() {
 }
 
 init();
+
+
+
+// Load the finished-tournament list and show it with checkboxes
+async function loadTournaments() {
+  const container = document.getElementById("tournament-list");
+  container.innerHTML = "Lade...";
+  try {
+    const tournaments = await loadData("/api/tournaments");
+    if (tournaments.length === 0) {
+      container.innerHTML = "<p>Keine beendeten Turniere gefunden.</p>";
+      return;
+    }
+    const items = tournaments
+      .map(t => `<li>
+        <label>
+          <input type="checkbox" value="${t.id}">
+          ${t.name} (${t.players} Spieler)
+        </label>
+      </li>`)
+      .join("");
+    container.innerHTML = `<ul>${items}</ul>`;
+  } catch (error) {
+    container.innerHTML = `<p>Fehler: ${error.message}</p>`;
+  }
+}
+
+document.getElementById("load-tournaments").addEventListener("click", loadTournaments);

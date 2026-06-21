@@ -1,30 +1,36 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Lichess Turnier-Pipeline</title>
+    <meta charset="UTF-8">
+    <title>Lichess Turnier-Pipeline</title>
 </head>
+
 <body>
-  <h1>Lichess Turnier-Pipeline</h1>
+    <h1>Lichess Turnier-Pipeline</h1>
 
-  <h2>Sieg-Verteilung</h2>
-  <div id="winners">Lade...</div>
+    <h2>Turniere importieren</h2>
+    <button id="load-tournaments">Turniere laden</button>
+    <div id="tournament-list"></div>
 
-  <h2>Häufigste Eröffnungen</h2>
-  <div id="openings">Lade...</div>
+    <h2>Sieg-Verteilung</h2>
+    <div id="winners">Lade...</div>
 
-  <h2>Aktivste Spieler</h2>
-  <div id="top-players">Lade...</div>
+    <h2>Häufigste Eröffnungen</h2>
+    <div id="openings">Lade...</div>
 
-  <script src="app.js"></script>
+    <h2>Aktivste Spieler</h2>
+    <div id="top-players">Lade...</div>
+
+    <script src="app.js"></script>
 
     <h2>Datenbank-Schema</h2>
-  <div id="erd">Diagramm lädt...</div>
+    <div id="erd">Diagramm lädt...</div>
 
-  <script type="module">
-    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
 
-    const schema = `erDiagram
+        const schema = `erDiagram
       TOURNAMENT ||--o{ GAME : enthaelt
       TOURNAMENT ||--o{ STANDING : hat
       PLAYER ||--o{ STANDING : steht_in
@@ -58,11 +64,12 @@
         int points
       }`;
 
-    mermaid.initialize({ startOnLoad: false });
-    const { svg } = await mermaid.render("erd-graph", schema);
-    document.getElementById("erd").innerHTML = svg;
-  </script>
+        mermaid.initialize({ startOnLoad: false });
+        const { svg } = await mermaid.render("erd-graph", schema);
+        document.getElementById("erd").innerHTML = svg;
+    </script>
 
 
 </body>
+
 </html>
