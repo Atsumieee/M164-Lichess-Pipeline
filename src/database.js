@@ -113,6 +113,69 @@ async function setupDatabase() {
   console.log(`Database '${DB_NAME}' is ready with a fresh schema.`);
 }
 
+// Create the database and tables only if they are missing (NO drop).
+// Used by the merge import path so previously imported data is preserved.
+const ensureSchemaSql = `
+IF OBJECT_ID('tournament', 'U') IS NULL
+CREATE TABLE tournament (
+  tournament_id NVARCHAR(20) PRIMARY KEY,
+  name NVARCHAR(255),
+  system NVARCHAR(20),
+  start_time DATETIME2,
+  player_count INT
+);
+
+IF OBJECT_ID('player', 'U') IS NULL
+CREATE TABLE player (
+  player_id NVARCHAR(50) PRIMARY KEY,
+  username NVARCHAR(50),
+  title NVARCHAR(10) NULL
+);
+
+IF OBJECT_ID('game', 'U') IS NULL
+CREATE TABLE game (
+  game_id NVARCHAR(20) PRIMARY KEY,
+  tournament_id NVARCHAR(20) NOT NULL,
+  white_id NVARCHAR(50) NOT NULL,
+  black_id NVARCHAR(50) NOT NULL,
+  winner NVARCHAR(10) NULL,
+  opening NVARCHAR(255) NULL,
+  move_count INT NULL,
+  CONSTRAINT fk_game_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(tournament_id),
+  CONSTRAINT fk_game_white FOREIGN KEY (white_id) REFERENCES player(player_id),
+  CONSTRAINT fk_game_black FOREIGN KEY (black_id) REFERENCES player(player_id)
+);
+
+IF OBJECT_ID('standing', 'U') IS NULL
+CREATE TABLE standing (
+  tournament_id NVARCHAR(20) NOT NULL,
+  player_id NVARCHAR(50) NOT NULL,
+  [rank] INT,
+  points INT,
+  CONSTRAINT pk_standing PRIMARY KEY (tournament_id, player_id),
+  CONSTRAINT fk_standing_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(tournament_id),
+  CONSTRAINT fk_standing_player FOREIGN KEY (player_id) REFERENCES player(player_id)
+);
+`;
+
+async function ensureSchema() {
+  // Step 1: create the database if it does not exist yet
+  const masterPool = new sql.ConnectionPool(masterConfig);
+  await masterPool.connect();
+  await masterPool.request().batch(
+    `IF DB_ID('${DB_NAME}') IS NULL CREATE DATABASE ${DB_NAME}`
+  );
+  await masterPool.close();
+
+  // Step 2: create the tables only if they are missing (keeps existing rows)
+  const appPool = new sql.ConnectionPool(appConfig);
+  await appPool.connect();
+  await appPool.request().batch(ensureSchemaSql);
+  await appPool.close();
+
+  console.log(`Database '${DB_NAME}' schema ensured (existing data kept).`);
+}
+
 // Drop the whole database -> leaves no trace behind
 async function teardownDatabase() {
   const masterPool = new sql.ConnectionPool(masterConfig);
@@ -161,6 +224,84 @@ async function bulkLoadCsvs() {
     await pool.close();
   }
   console.log("Import complete.");
+}
+
+// Staging tables mirror the CSV columns but carry no keys/constraints,
+// so BULK INSERT never conflicts with existing data.
+const stageDdl = `
+DROP TABLE IF EXISTS stage_standing;
+DROP TABLE IF EXISTS stage_game;
+DROP TABLE IF EXISTS stage_player;
+DROP TABLE IF EXISTS stage_tournament;
+
+CREATE TABLE stage_tournament (tournament_id NVARCHAR(20), name NVARCHAR(255), system NVARCHAR(20), start_time DATETIME2, player_count INT);
+CREATE TABLE stage_player (player_id NVARCHAR(50), username NVARCHAR(50), title NVARCHAR(10) NULL);
+CREATE TABLE stage_game (game_id NVARCHAR(20), tournament_id NVARCHAR(20), white_id NVARCHAR(50), black_id NVARCHAR(50), winner NVARCHAR(10) NULL, opening NVARCHAR(255) NULL, move_count INT NULL);
+CREATE TABLE stage_standing (tournament_id NVARCHAR(20), player_id NVARCHAR(50), [rank] INT, points INT);
+`;
+
+// Insert only rows that are not already present, parents before children,
+// then drop the staging tables again. Re-importing a tournament is a no-op.
+const mergeSql = `
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+
+INSERT INTO tournament (tournament_id, name, system, start_time, player_count)
+SELECT s.tournament_id, s.name, s.system, s.start_time, s.player_count
+FROM stage_tournament s
+WHERE NOT EXISTS (SELECT 1 FROM tournament t WHERE t.tournament_id = s.tournament_id);
+
+-- Players with full info from the player CSV
+INSERT INTO player (player_id, username, title)
+SELECT s.player_id, s.username, s.title
+FROM stage_player s
+WHERE NOT EXISTS (SELECT 1 FROM player p WHERE p.player_id = s.player_id);
+
+-- Safety net: guarantee every player_id referenced by games or standings
+-- exists, even if its row was missing from the player CSV. Falls back to the
+-- id as username. This keeps the FK constraints satisfied no matter what.
+INSERT INTO player (player_id, username, title)
+SELECT ref.id, ref.id, NULL
+FROM (
+  SELECT white_id AS id FROM stage_game
+  UNION SELECT black_id FROM stage_game
+  UNION SELECT player_id FROM stage_standing
+) ref
+WHERE NOT EXISTS (SELECT 1 FROM player p WHERE p.player_id = ref.id);
+
+INSERT INTO game (game_id, tournament_id, white_id, black_id, winner, opening, move_count)
+SELECT s.game_id, s.tournament_id, s.white_id, s.black_id, s.winner, s.opening, s.move_count
+FROM stage_game s
+WHERE NOT EXISTS (SELECT 1 FROM game g WHERE g.game_id = s.game_id);
+
+INSERT INTO standing (tournament_id, player_id, [rank], points)
+SELECT s.tournament_id, s.player_id, s.[rank], s.points
+FROM stage_standing s
+WHERE NOT EXISTS (SELECT 1 FROM standing x WHERE x.tournament_id = s.tournament_id AND x.player_id = s.player_id);
+
+COMMIT TRANSACTION;
+
+DROP TABLE stage_standing;
+DROP TABLE stage_game;
+DROP TABLE stage_player;
+DROP TABLE stage_tournament;
+`;
+
+// Bulk load the four CSVs into staging, then merge into the real tables.
+async function mergeLoadCsvs() {
+  const pool = new sql.ConnectionPool(appConfig);
+  await pool.connect();
+  try {
+    await pool.request().batch(stageDdl);
+    await bulkLoad(pool, "stage_tournament", "tournament.csv");
+    await bulkLoad(pool, "stage_player", "player.csv");
+    await bulkLoad(pool, "stage_game", "game.csv");
+    await bulkLoad(pool, "stage_standing", "standing.csv");
+    await pool.request().batch(mergeSql);
+  } finally {
+    await pool.close();
+  }
+  console.log("Merge import complete.");
 }
 
 
@@ -219,7 +360,7 @@ async function exportData() {
 }
 
 
-export { setupDatabase, teardownDatabase, bulkLoadCsvs, verifyData, exportData };
+export { setupDatabase, ensureSchema, teardownDatabase, bulkLoadCsvs, mergeLoadCsvs, verifyData, exportData };
 
 
 
