@@ -1,6 +1,6 @@
 import { fetchTournamentInfo, fetchStandings, fetchGames, transformTournament } from "./lichess.js";
 import { writeCsv } from "./csv.js";
-import { setupDatabase, bulkLoadCsvs } from "./database.js";
+import { ensureSchema, mergeLoadCsvs } from "./database.js";
 
 const OUTPUT_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data";
 
@@ -49,8 +49,8 @@ async function runImport(tournamentIds) {
     await writeCsv(OUTPUT_DIR, "game", games, ["game_id", "tournament_id", "white_id", "black_id", "winner", "opening", "move_count"]);
     await writeCsv(OUTPUT_DIR, "standing", standings, ["tournament_id", "player_id", "rank", "points"]);
 
-    await setupDatabase();   // fresh schema (drops + recreates)
-    await bulkLoadCsvs();    // BULK INSERT the four CSVs
+    await ensureSchema();    // create DB/tables if missing, keep existing data
+    await mergeLoadCsvs();   // BULK INSERT into staging, then merge (no duplicates)
 
     return { tournaments: tournaments.length, players: players.size, games: games.length };
 }
