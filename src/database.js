@@ -1,4 +1,6 @@
 import sql from "mssql";
+import { exportToXlsx } from "./export.js";
+
 
 const config = {
   server: process.env.DB_SERVER,
@@ -209,6 +211,19 @@ async function verifyData() {
 
 
 
+async function exportData() {
+
+  const pool = new sql.ConnectionPool(appConfig);
+  await pool.connect();
+
+  try {
+    await exportToXlsx(pool, `${DATA_DIR}\\export.xlsx`);
+  } finally {
+    await pool.close();
+  }
+
+}
+
 
 // Pick the action from the command-line argument
 const command = process.argv[2];
@@ -220,6 +235,8 @@ try {
     await importData();
   } else  if (command === "verify"){
     await verifyData();
+  } else if (command === "export" ){ 
+    await exportData();
   } else {
     await setupDatabase();
   }
