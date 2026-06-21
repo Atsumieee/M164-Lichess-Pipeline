@@ -2,6 +2,7 @@ import express from "express";
 import { getOpeningStats, getWinnerStats, getTopPlayers } from "./queries.js";
 import { fetchTournamentList } from "./lichess.js";
 import { runImport } from "./pipeline.js";
+import { setupDatabase } from "./database.js";
 
 const app = express();
 const PORT = 3000;
@@ -73,5 +74,16 @@ app.post("/api/import", async (request, response) => {
   } catch (error) {
     console.error(error.message);
     response.status(500).json({ error: "Import failed" });
+  }
+});
+
+// Wipe all imported data: drop + recreate empty tables (keeps the database).
+app.post("/api/reset", async (request, response) => {
+  try {
+    await setupDatabase();
+    response.json({ ok: true });
+  } catch (error) {
+    console.error(error.message);
+    response.status(500).json({ error: "Reset failed" });
   }
 });
