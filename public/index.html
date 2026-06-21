@@ -17,5 +17,52 @@
   <div id="top-players">Lade...</div>
 
   <script src="app.js"></script>
+
+    <h2>Datenbank-Schema</h2>
+  <div id="erd">Diagramm lädt...</div>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+    const schema = `erDiagram
+      TOURNAMENT ||--o{ GAME : enthaelt
+      TOURNAMENT ||--o{ STANDING : hat
+      PLAYER ||--o{ STANDING : steht_in
+      PLAYER ||--o{ GAME : spielt_weiss
+      PLAYER ||--o{ GAME : spielt_schwarz
+      TOURNAMENT {
+        nvarchar tournament_id PK
+        nvarchar name
+        nvarchar system
+        datetime2 start_time
+        int player_count
+      }
+      PLAYER {
+        nvarchar player_id PK
+        nvarchar username
+        nvarchar title
+      }
+      GAME {
+        nvarchar game_id PK
+        nvarchar tournament_id FK
+        nvarchar white_id FK
+        nvarchar black_id FK
+        nvarchar winner
+        nvarchar opening
+        int move_count
+      }
+      STANDING {
+        nvarchar tournament_id PK,FK
+        nvarchar player_id PK,FK
+        int rank
+        int points
+      }`;
+
+    mermaid.initialize({ startOnLoad: false });
+    const { svg } = await mermaid.render("erd-graph", schema);
+    document.getElementById("erd").innerHTML = svg;
+  </script>
+
+
 </body>
 </html>
