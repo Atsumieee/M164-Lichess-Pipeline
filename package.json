@@ -4,7 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node --env-file=.env src/server.js",
+    "setup": "node --env-file=.env src/index.js setup",
+    "reset": "node --env-file=.env src/index.js setup",
+    "import": "node --env-file=.env src/index.js import",
+    "verify": "node --env-file=.env src/index.js verify",
+    "export": "node --env-file=.env src/index.js export",
+    "teardown": "node --env-file=.env src/index.js teardown"
   },
   "keywords": [],
   "author": "",
