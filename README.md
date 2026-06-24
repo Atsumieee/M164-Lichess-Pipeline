@@ -61,10 +61,11 @@ npm start
 - **Windows Authentication (recommended)** - connects as your Windows user. Works if
   SQL Server Express is installed locally and you ran the installer as an admin. No extra
   SQL configuration needed.
-- **SQL Authentication** - creates a `lichess_app` SQL login automatically (you choose
-  the password). Requires mixed-mode authentication to be enabled in SQL Server:
-  SSMS, right-click server, *Properties*, *Security*, "SQL Server and Windows
-  Authentication mode", then restart the service.
+- **SQL Authentication** - creates a `lichess_app` SQL login automatically. You will be
+  asked for an admin login (e.g. `sa`) to create it, then a password for the new login.
+  Requires mixed-mode authentication to be enabled in SQL Server: SSMS, right-click
+  server, *Properties*, *Security*, "SQL Server and Windows Authentication mode", then
+  restart the service.
 
 Then open **http://localhost:3000**.
 

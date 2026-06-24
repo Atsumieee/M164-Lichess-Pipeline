@@ -22,17 +22,22 @@ let dbUser, dbPassword;
 
 if (!windowsAuth) {
   dbUser = 'lichess_app';
-  const pw = (await ask(`Password for SQL login '${dbUser}' [press Enter for default]: `)).trim();
+  const pw = (await ask(`Password for new SQL login '${dbUser}' [press Enter for default]: `)).trim();
   dbPassword = pw || 'ChangeMe_StrongPassword1';
 
-  console.log('\nConnecting to SQL Server via Windows Authentication to create the SQL login...');
+  console.log('\nTo create the SQL login, admin credentials are needed.');
+  console.log('Use the "sa" account or any login with sysadmin rights.\n');
+
+  const adminUser = (await ask('Admin username [sa]: ')).trim() || 'sa';
+  const adminPassword = (await ask('Admin password: ')).trim();
 
   const adminPool = new sql.ConnectionPool({
     server: SERVER,
     database: 'master',
+    user: adminUser,
+    password: adminPassword,
     options: {
       instanceName: INSTANCE,
-      trustedConnection: true,
       trustServerCertificate: true,
       encrypt: false
     }
@@ -41,8 +46,8 @@ if (!windowsAuth) {
   try {
     await adminPool.connect();
   } catch (err) {
-    console.error('\nCould not connect as Windows admin:', err.message);
-    console.error('Make sure TCP/IP is enabled and SQL Server Browser is running.');
+    console.error('\nCould not connect as admin:', err.message);
+    console.error('Check the username/password and make sure mixed-mode authentication is enabled.');
     rl.close();
     process.exit(1);
   }
@@ -57,10 +62,7 @@ if (!windowsAuth) {
       ALTER SERVER ROLE bulkadmin ADD MEMBER [${dbUser}];
   `);
   await adminPool.close();
-  console.log(`SQL login '${dbUser}' is ready.`);
-
-  console.log('\nNote: mixed-mode authentication must be enabled in SQL Server for SQL logins.');
-  console.log('If you see "Login failed" when starting the app, check the README Troubleshooting section.\n');
+  console.log(`\nSQL login '${dbUser}' is ready.`);
 }
 
 // Write .env
