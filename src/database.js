@@ -5,12 +5,12 @@ const DATA_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data"
 
 
 const config = {
-  server: process.env.DB_SERVER,
+  server: process.env.DB_SERVER ?? 'localhost',
   database: "master",
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  ...(process.env.DB_USER ? { user: process.env.DB_USER, password: process.env.DB_PASSWORD } : {}),
   options: {
-    instanceName: process.env.DB_INSTANCE,
+    instanceName: process.env.DB_INSTANCE ?? 'SQLEXPRESS',
+    trustedConnection: !process.env.DB_USER,
     trustServerCertificate: true,
     encrypt: false
   }
@@ -34,11 +34,11 @@ const DB_NAME = "LichessTournaments";
 
 // Shared connection settings for every connection we open
 const baseConfig = {
-  server: process.env.DB_SERVER,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  server: process.env.DB_SERVER ?? 'localhost',
+  ...(process.env.DB_USER ? { user: process.env.DB_USER, password: process.env.DB_PASSWORD } : {}),
   options: {
-    instanceName: process.env.DB_INSTANCE,
+    instanceName: process.env.DB_INSTANCE ?? 'SQLEXPRESS',
+    trustedConnection: !process.env.DB_USER,
     trustServerCertificate: true,
     encrypt: false
   }
@@ -191,6 +191,7 @@ async function teardownDatabase() {
 
   console.log(`Database '${DB_NAME}' removed.`);
 }
+
 
 
 // Bulk load one CSV file into one table (server-side read)

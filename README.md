@@ -29,28 +29,15 @@ reset the database.
 
 ---
 
-## Setup (6 steps)
+## Setup (4 steps)
 
 ### Prerequisites
 
 1. **Node.js 24** — check with `node --version`.
-2. **SQL Server 2022 Express** + **SQL Server Management Studio (SSMS)** (or Azure Data
-   Studio) to run the setup script.
-
-### One-time SQL Server configuration
-
-The app connects with a **SQL login** (not Windows auth) and resolves the instance by
-name, so three things must be enabled:
-
-1. **Mixed-mode authentication** — SSMS → right-click the server → *Properties* →
-   *Security* → "SQL Server and Windows Authentication mode" → restart the SQL Server
-   service.
-2. **TCP/IP enabled** — *SQL Server Configuration Manager* → *SQL Server Network
-   Configuration* → *Protocols for SQLEXPRESS* → enable **TCP/IP** → restart the
-   service.
-3. **SQL Server Browser running** — same tool → *SQL Server Services* → start
-   **SQL Server Browser** (and set it to start automatically). This is needed to
-   connect by instance name.
+2. **SQL Server 2022 Express** installed and running.
+3. **TCP/IP enabled** and **SQL Server Browser running** — open *SQL Server Configuration
+   Manager* → enable TCP/IP under *Protocols for SQLEXPRESS* → start *SQL Server Browser*
+   → restart the SQL Server service. (One-time, needed to reach the named instance.)
 
 ### The steps
 
@@ -62,18 +49,22 @@ cd lichess-pipeline
 # 2. Install dependencies
 npm install
 
-# 3. Create your .env from the template, then edit the 4 values
-copy .env.example .env        # Windows  (use: cp .env.example .env  in Git Bash)
+# 3. Interactive setup — creates .env and the database
+npm run init
 
-# 4. Create the SQL login (run db-setup.sql in SSMS as an admin).
-#    Change the password in the script first, and use the SAME password in .env.
-
-# 5. Create the database and empty tables
-npm run setup
-
-# 6. Start the web server
+# 4. Start the web server
 npm start
 ```
+
+`npm run init` asks one question:
+
+- **Windows Authentication (recommended)** — connects as your Windows user. Works if
+  SQL Server Express is installed locally and you ran the installer as an admin. No extra
+  SQL configuration needed.
+- **SQL Authentication** — creates a `lichess_app` SQL login automatically (you choose
+  the password). Requires mixed-mode authentication to be enabled in SQL Server:
+  SSMS → right-click server → *Properties* → *Security* → "SQL Server and Windows
+  Authentication mode" → restart the service.
 
 Then open **http://localhost:3000**.
 
@@ -208,12 +199,17 @@ db-setup.sql     One-time SQL login + permissions
 
 ## Troubleshooting
 
-- **Login failed for user 'lichess_app'** — mixed-mode auth is off, the password in
-  `.env` doesn't match `db-setup.sql`, or SQL Server Browser isn't running.
 - **Cannot connect / instance not found** — TCP/IP not enabled, or SQL Server Browser
-  not running (both required to reach a named instance).
+  not running. Both are required to reach a named instance — see step 3 of Setup.
+- **Login failed for user 'lichess_app'** (SQL auth path) — mixed-mode authentication is
+  off. Enable it in SSMS → server *Properties* → *Security*, then restart the service.
+  Re-run `npm run init` to recreate `.env` and the login.
+- **Login failed for Windows user** (Windows auth path) — your Windows account may not
+  have `sysadmin` rights on the instance. Open SSMS, connect as `sa`, and grant your
+  account the `sysadmin` role under *Security → Logins*.
 - **`You do not have permission to use the bulk load statement`** — the login is missing
-  the **`bulkadmin`** role. Re-run `db-setup.sql`.
+  the `bulkadmin` role. Re-run `npm run init` (SQL auth path) to re-grant it, or run
+  `db-setup.sql` manually in SSMS.
 - **`Cannot bulk load. Operating system error … Access is denied`** — SQL Server reads
   the CSVs server-side from `C:\Users\Public\Projects\M164-Lichess-Pipeline\data`. The
   app creates this folder automatically, but on a locked-down machine the SQL Server

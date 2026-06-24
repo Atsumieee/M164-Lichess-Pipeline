@@ -1,12 +1,12 @@
 import sql from "mssql";
 
 const config = {
-  server: process.env.DB_SERVER,
+  server: process.env.DB_SERVER ?? 'localhost',
   database: "LichessTournaments",
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  ...(process.env.DB_USER ? { user: process.env.DB_USER, password: process.env.DB_PASSWORD } : {}),
   options: {
-    instanceName: process.env.DB_INSTANCE,
+    instanceName: process.env.DB_INSTANCE ?? 'SQLEXPRESS',
+    trustedConnection: !process.env.DB_USER,
     trustServerCertificate: true,
     encrypt: false
   }
