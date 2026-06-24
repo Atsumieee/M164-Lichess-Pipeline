@@ -23,7 +23,7 @@ reset the database.
 ## Tech stack
 
 - **Node.js 24** (ES Modules). Environment variables are loaded with Node's built-in
-  `--env-file=.env` — no `dotenv` package needed.
+  `--env-file=.env` (no `dotenv` package needed).
 - **SQL Server 2022 Express** (named instance `SQLEXPRESS`).
 - Dependencies: `mssql`, `express`, `exceljs`.
 
@@ -33,11 +33,11 @@ reset the database.
 
 ### Prerequisites
 
-1. **Node.js 24** — check with `node --version`.
+1. **Node.js 24** - check with `node --version`.
 2. **SQL Server 2022 Express** installed and running.
-3. **TCP/IP enabled** and **SQL Server Browser running** — open *SQL Server Configuration
-   Manager* → enable TCP/IP under *Protocols for SQLEXPRESS* → start *SQL Server Browser*
-   → restart the SQL Server service. (One-time, needed to reach the named instance.)
+3. **TCP/IP enabled** and **SQL Server Browser running** - open *SQL Server Configuration
+   Manager*, enable TCP/IP under *Protocols for SQLEXPRESS*, start *SQL Server Browser*,
+   and restart the SQL Server service. (One-time, needed to reach the named instance.)
 
 ### The steps
 
@@ -49,7 +49,7 @@ cd lichess-pipeline
 # 2. Install dependencies
 npm install
 
-# 3. Interactive setup — creates .env and the database
+# 3. Interactive setup - creates .env and the database
 npm run init
 
 # 4. Start the web server
@@ -58,28 +58,28 @@ npm start
 
 `npm run init` asks one question:
 
-- **Windows Authentication (recommended)** — connects as your Windows user. Works if
+- **Windows Authentication (recommended)** - connects as your Windows user. Works if
   SQL Server Express is installed locally and you ran the installer as an admin. No extra
   SQL configuration needed.
-- **SQL Authentication** — creates a `lichess_app` SQL login automatically (you choose
+- **SQL Authentication** - creates a `lichess_app` SQL login automatically (you choose
   the password). Requires mixed-mode authentication to be enabled in SQL Server:
-  SSMS → right-click server → *Properties* → *Security* → "SQL Server and Windows
-  Authentication mode" → restart the service.
+  SSMS, right-click server, *Properties*, *Security*, "SQL Server and Windows
+  Authentication mode", then restart the service.
 
 Then open **http://localhost:3000**.
 
-> On first start the dashboard is empty — that's expected. Click **Turniere laden**,
+> On first start the dashboard is empty. Click **Turniere laden**,
 > pick a tournament, and **Ausgewählte importieren**.
 
 ---
 
 ## Using it
 
-- **Turniere laden** — loads the list of recently finished tournaments. Ones already in
+- **Turniere laden** - loads the list of recently finished tournaments. Ones already in
   the database are shown checked, locked, and badged "importiert".
-- **Ausgewählte importieren** — imports the tournaments you ticked. Importing **adds** to
+- **Ausgewählte importieren** - imports the tournaments you ticked. Importing **adds** to
   what's already there (re-importing the same tournament is a no-op).
-- **Datenbank zurücksetzen** (bottom of the import panel) — wipes all imported data after
+- **Datenbank zurücksetzen** (bottom of the import panel) - wipes all imported data after
   an inline confirmation.
 
 ## Command reference
@@ -90,7 +90,7 @@ All commands read `.env` automatically.
 |---|---|
 | `npm start` | Start the web server at http://localhost:3000 |
 | `npm run setup` | Create the database + empty tables (also empties an existing DB) |
-| `npm run reset` | Same as setup — empty the tables |
+| `npm run reset` | Same as setup, empties the tables |
 | `npm run import -- <id> [<id> ...]` | Import tournaments from the command line |
 | `npm run verify` | Print sample joined rows and check for orphaned games |
 | `npm run export` | Export the data to `…/data/export.xlsx` |
@@ -200,18 +200,18 @@ db-setup.sql     One-time SQL login + permissions
 
 ## Troubleshooting
 
-- **Cannot connect / instance not found** — TCP/IP not enabled, or SQL Server Browser
-  not running. Both are required to reach a named instance — see step 3 of Setup.
-- **Login failed for user 'lichess_app'** (SQL auth path) — mixed-mode authentication is
-  off. Enable it in SSMS → server *Properties* → *Security*, then restart the service.
+- **Cannot connect / instance not found** - TCP/IP not enabled, or SQL Server Browser
+  not running. Both are required to reach a named instance (see step 3 of Setup).
+- **Login failed for user 'lichess_app'** (SQL auth path) - mixed-mode authentication is
+  off. Enable it in SSMS under server *Properties* > *Security*, then restart the service.
   Re-run `npm run init` to recreate `.env` and the login.
-- **Login failed for Windows user** (Windows auth path) — your Windows account may not
+- **Login failed for Windows user** (Windows auth path) - your Windows account may not
   have `sysadmin` rights on the instance. Open SSMS, connect as `sa`, and grant your
-  account the `sysadmin` role under *Security → Logins*.
-- **`You do not have permission to use the bulk load statement`** — the login is missing
+  account the `sysadmin` role under *Security > Logins*.
+- **`You do not have permission to use the bulk load statement`** - the login is missing
   the `bulkadmin` role. Re-run `npm run init` (SQL auth path) to re-grant it, or run
   `db-setup.sql` manually in SSMS.
-- **`Cannot bulk load. Operating system error … Access is denied`** — SQL Server reads
+- **`Cannot bulk load. Operating system error … Access is denied`** - SQL Server reads
   the CSVs server-side from `C:\Users\Public\Projects\M164-Lichess-Pipeline\data`. The
   app creates this folder automatically, but on a locked-down machine the SQL Server
   service account may need read access to it.
