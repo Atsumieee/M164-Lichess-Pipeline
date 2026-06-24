@@ -24,7 +24,7 @@ reset the database.
 
 - **Node.js 24** (ES Modules). Environment variables are loaded with Node's built-in
   `--env-file=.env` (no `dotenv` package needed).
-- **SQL Server 2022 Express** (named instance `SQLEXPRESS`).
+- **SQL Server 2022+ Express** (named instance `SQLEXPRESS`).
 - Dependencies: `mssql`, `express`, `exceljs`.
 
 ---
@@ -34,7 +34,7 @@ reset the database.
 ### Prerequisites
 
 1. **Node.js 24** - check with `node --version`.
-2. **SQL Server 2022 Express** installed and running.
+2. **SQL Server 2022+ Express** installed and running.
 3. **TCP/IP enabled** and **SQL Server Browser running** - open *SQL Server Configuration
    Manager*, enable TCP/IP under *Protocols for SQLEXPRESS*, start *SQL Server Browser*,
    and restart the SQL Server service. (One-time, needed to reach the named instance.)
