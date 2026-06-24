@@ -107,6 +107,7 @@ needed and `BULK INSERT` is simpler). Players are deduplicated across all tourna
 lowercased id.
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 erDiagram
     TOURNAMENT ||--o{ GAME : enthaelt
     TOURNAMENT ||--o{ STANDING : hat

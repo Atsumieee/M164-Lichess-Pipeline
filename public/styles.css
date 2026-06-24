@@ -337,7 +337,8 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.02em; }
 
 /* ---- ERD --------------------------------------------------------------- */
 .erd { overflow-x: auto; }
-.erd svg { max-width: 100%; height: auto; }
+.erd svg { max-width: 100%; height: auto; background: transparent; }
+.erd svg > rect:first-child { fill: transparent; }
 
 /* ---- Motion preferences ----------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
