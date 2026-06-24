@@ -24,7 +24,7 @@ function getPool() {
 async function getOpeningStats() {
   const pool = await getPool();
   const result = await pool.request().query(`
-    SELECT ISNULL(opening, 'Unknown') AS opening, COUNT(*) AS count
+    SELECT ISNULL(opening, 'Unbekannte Eröffnung') AS opening, COUNT(*) AS count
     FROM game
     GROUP BY opening
     ORDER BY count DESC;
