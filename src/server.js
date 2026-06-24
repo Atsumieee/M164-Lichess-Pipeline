@@ -8,6 +8,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.static("public"));
+app.use(express.json());
 
 app.get("/api/stats/openings", async (request, response) => {
   try {
@@ -36,16 +37,9 @@ app.get("/api/stats/top-players", async (request, response) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
-
-
-
 app.get("/api/tournaments", async (request, response) => {
   try {
     const data = await fetchTournamentList();
-    // Only finished tournaments are stable enough to import
     const finished = (data.finished ?? []).map(t => ({
       id: t.id,
       name: t.fullName,
@@ -58,20 +52,14 @@ app.get("/api/tournaments", async (request, response) => {
   }
 });
 
-// IDs of tournaments already imported (empty if nothing imported yet)
 app.get("/api/imported", async (request, response) => {
   try {
     response.json(await getImportedTournamentIds());
   } catch (error) {
     console.error(error.message);
-    response.json([]);   // no database/data yet -> nothing imported
+    response.json([]);
   }
 });
-
-
-
-// Allow the server to read JSON bodies from POST requests
-app.use(express.json());
 
 app.post("/api/import", async (request, response) => {
   const ids = request.body.ids;
@@ -87,7 +75,6 @@ app.post("/api/import", async (request, response) => {
   }
 });
 
-// Wipe all imported data: drop + recreate empty tables (keeps the database).
 app.post("/api/reset", async (request, response) => {
   try {
     await setupDatabase();
@@ -96,4 +83,8 @@ app.post("/api/reset", async (request, response) => {
     console.error(error.message);
     response.status(500).json({ error: "Reset failed" });
   }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
 });
