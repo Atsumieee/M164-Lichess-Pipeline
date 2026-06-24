@@ -111,10 +111,10 @@ lowercased id.
 %%{init: {'theme': 'neutral'}}%%
 erDiagram
     TOURNAMENT ||--o{ GAME : enthaelt
-    TOURNAMENT ||--o{ STANDING : hat
-    PLAYER ||--o{ STANDING : steht_in
     PLAYER ||--o{ GAME : spielt_weiss
     PLAYER ||--o{ GAME : spielt_schwarz
+    TOURNAMENT ||--o{ STANDING : hat
+    PLAYER ||--o{ STANDING : steht_in
     TOURNAMENT {
         nvarchar tournament_id PK
         nvarchar name
