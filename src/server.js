@@ -53,8 +53,8 @@ app.get("/api/tournaments", async (request, response) => {
     }));
     response.json(finished);
   } catch (error) {
-    console.error(error.message);
-    response.status(500).json({ error: "Could not load tournaments" });
+    console.error("Lichess API error:", error.message, error.cause ?? "");
+    response.status(500).json({ error: error.message });
   }
 });
 

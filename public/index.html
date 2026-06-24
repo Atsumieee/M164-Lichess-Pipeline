@@ -118,21 +118,11 @@
         int points
       }`;
 
-    // Theme mermaid to match the board palette instead of its default look
     mermaid.initialize({
       startOnLoad: false,
-      theme: "base",
+      theme: "dark",
       themeVariables: {
-        fontFamily: '"Hanken Grotesk", system-ui, sans-serif',
-        background: "transparent",
-        mainBkg: "#1E2330",
-        primaryColor: "#1E2330",
-        primaryTextColor: "#ECE7DA",
-        primaryBorderColor: "#C6A15B",
-        lineColor: "#5A6172",
-        textColor: "#ECE7DA",
-        attributeBackgroundColorOdd: "#1A1E29",
-        attributeBackgroundColorEven: "#1E2330"
+        fontFamily: '"Hanken Grotesk", system-ui, sans-serif'
       }
     });
 

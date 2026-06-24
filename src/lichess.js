@@ -22,8 +22,8 @@ async function fetchStandings(tournamentId) {
 // Fetch all games of one arena tournament
 async function fetchGames(tournamentId) {
   // We need to explicitly state that we want the NDJSON-Format, otherwise we would get the PNG-Format
-  const response = await fetch(`${API_BASE}/tournament/${tournamentId}/games?opening=true`,{
-  headers: { Accept: "application/x-ndjson" }
+  const response = await fetch(`${API_BASE}/tournament/${tournamentId}/games?opening=true`, {
+    headers: { Accept: "application/x-ndjson" }
   });
 
   if (!response.ok) {
@@ -91,7 +91,9 @@ function transformTournament(tournamentMeta, standings, games) {
 
 // Fetch the list of currently visible arena tournaments (finished/ongoing/upcoming)
 async function fetchTournamentList() {
-  const response = await fetch(`${API_BASE}/tournament`);
+  const response = await fetch(`${API_BASE}/tournament`, {
+    headers: { "User-Agent": "M164-Lichess-Pipeline/1.0" }
+  });
   if (!response.ok) {
     throw new Error(`Tournament list failed with status ${response.status}`);
   }
