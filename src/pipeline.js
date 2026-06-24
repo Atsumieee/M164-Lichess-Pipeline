@@ -1,8 +1,10 @@
 import { fetchTournamentInfo, fetchStandings, fetchGames, transformTournament } from "./lichess.js";
 import { writeCsv } from "./csv.js";
 import { ensureSchema, mergeLoadCsvs } from "./database.js";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
-const OUTPUT_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data";
+const OUTPUT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
 
 // Normalize a date value into a format SQL Server reliably accepts
 function toSqlDate(value) {
@@ -19,7 +21,6 @@ async function runImport(tournamentIds) {
 
     for (const id of tournamentIds) {
         const info = await fetchTournamentInfo(id);
-        console.log(info)
         const rawStandings = await fetchStandings(id);
         const rawGames = await fetchGames(id);
 

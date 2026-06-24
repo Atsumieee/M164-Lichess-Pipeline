@@ -1,7 +1,9 @@
 import sql from "mssql";
 import { exportToXlsx } from "./export.js";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
-const DATA_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data"
+const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
 
 
 const config = {
@@ -340,7 +342,7 @@ async function verifyData() {
 
 
   } finally {
-    await pool.close;
+    await pool.close();
   }
 
 };
