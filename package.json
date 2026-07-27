@@ -4,13 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node --env-file=.env src/server.js",
-    "setup": "node --env-file=.env src/index.js setup",
-    "reset": "node --env-file=.env src/index.js setup",
-    "import": "node --env-file=.env src/index.js import",
-    "verify": "node --env-file=.env src/index.js verify",
-    "export": "node --env-file=.env src/index.js export",
-    "teardown": "node --env-file=.env src/index.js teardown"
+    "start": "node src/server.js",
+    "setup": "node src/index.js setup",
+    "reset": "node src/index.js setup",
+    "import": "node src/index.js import",
+    "verify": "node src/index.js verify",
+    "export": "node src/index.js export",
+    "teardown": "node src/index.js teardown"
   },
   "keywords": [],
   "author": "",
