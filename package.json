@@ -17,8 +17,11 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "better-sqlite3": "^13.0.1",
     "exceljs": "^3.4.0",
-    "express": "^5.2.1",
-    "mssql": "^12.5.5"
+    "express": "^5.2.1"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.1": true
   }
 }
