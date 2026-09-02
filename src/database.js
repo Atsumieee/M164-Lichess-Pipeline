@@ -1,53 +1,14 @@
-import sql from "mssql";
+import Database from "better-sqlite3";
+import fs from "node:fs"
 import { exportToXlsx } from "./export.js";
 
+const DB_File = "./data/lichess.db"
+
+const db = new Database(DB_File);
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
+
 const DATA_DIR = "C:\\Users\\Public\\Projects\\M164-Lichess-Pipeline\\data"
-
-
-const config = {
-  server: process.env.DB_SERVER,
-  database: "master",
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  options: {
-    instanceName: process.env.DB_INSTANCE,
-    trustServerCertificate: true,
-    encrypt: false
-  }
-};
-
-// Function to test connection to the SQL-Server
-async function testConnection() {
-  try {
-    const pool = await sql.connect(config);
-    const result = await pool.request().query("SELECT SUSER_SNAME() AS who");
-    console.log("Connected as:", result.recordset[0].who);
-    await pool.close();
-  } catch (err) {
-    console.error("Connection failed:", err.message);
-  }
-}
-
-
-
-const DB_NAME = "LichessTournaments";
-
-// Shared connection settings for every connection we open
-const baseConfig = {
-  server: process.env.DB_SERVER,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  options: {
-    instanceName: process.env.DB_INSTANCE,
-    trustServerCertificate: true,
-    encrypt: false
-  }
-};
-
-// "master" always exists -> used to create or drop our own database
-const masterConfig = { ...baseConfig, database: "master" };
-// Our project database -> used to build the tables inside it
-const appConfig = { ...baseConfig, database: DB_NAME };
 
 // Drop children first (reverse FK order), then create parents first
 const schemaSql = `
@@ -57,26 +18,26 @@ DROP TABLE IF EXISTS player;
 DROP TABLE IF EXISTS tournament;
 
 CREATE TABLE tournament (
-  tournament_id NVARCHAR(20) PRIMARY KEY,
-  name NVARCHAR(255),
-  system NVARCHAR(20),
-  start_time DATETIME2,
+  tournament_id TEXT PRIMARY KEY,
+  name TEXT,
+  system TEXT,
+  start_time TEXT,
   player_count INT
 );
 
 CREATE TABLE player (
-  player_id NVARCHAR(50) PRIMARY KEY,
-  username NVARCHAR(50),
-  title NVARCHAR(10) NULL
+  player_id TEXT PRIMARY KEY,
+  username TEXT,
+  title TEXT NULL
 );
 
 CREATE TABLE game (
-  game_id NVARCHAR(20) PRIMARY KEY,
-  tournament_id NVARCHAR(20) NOT NULL,
-  white_id NVARCHAR(50) NOT NULL,
-  black_id NVARCHAR(50) NOT NULL,
-  winner NVARCHAR(10) NULL,
-  opening NVARCHAR(255) NULL,
+  game_id TEXT PRIMARY KEY,
+  tournament_id TEXT NOT NULL,
+  white_id TEXT NOT NULL,
+  black_id TEXT NOT NULL,
+  winner TEXT NULL,
+  opening TEXT NULL,
   move_count INT NULL,
   CONSTRAINT fk_game_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(tournament_id),
   CONSTRAINT fk_game_white FOREIGN KEY (white_id) REFERENCES player(player_id),
@@ -84,9 +45,9 @@ CREATE TABLE game (
 );
 
 CREATE TABLE standing (
-  tournament_id NVARCHAR(20) NOT NULL,
-  player_id NVARCHAR(50) NOT NULL,
-  [rank] INT,
+  tournament_id TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  "rank" INT,
   points INT,
   CONSTRAINT pk_standing PRIMARY KEY (tournament_id, player_id),
   CONSTRAINT fk_standing_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(tournament_id),
@@ -95,62 +56,50 @@ CREATE TABLE standing (
 `;
 
 // Create the database (if missing) and build a fresh set of tables
-async function setupDatabase() {
-  // Step 1: ensure the database exists -> talk to master for this
-  const masterPool = new sql.ConnectionPool(masterConfig);
-  await masterPool.connect();
-  await masterPool.request().batch(
-    `IF DB_ID('${DB_NAME}') IS NULL CREATE DATABASE ${DB_NAME}`
-  );
-  await masterPool.close();
+function setupDatabase() {
+  //  build the tables inside our own database
+  db.exec(schemaSql);
 
-  // Step 2: build the tables inside our own database
-  const appPool = new sql.ConnectionPool(appConfig);
-  await appPool.connect();
-  await appPool.request().batch(schemaSql);
-  await appPool.close();
-
-  console.log(`Database '${DB_NAME}' is ready with a fresh schema.`);
+  console.log(`Database is ready with a fresh schema.`);
 }
 
 // Create the database and tables only if they are missing (NO drop).
 // Used by the merge import path so previously imported data is preserved.
 const ensureSchemaSql = `
-IF OBJECT_ID('tournament', 'U') IS NULL
-CREATE TABLE tournament (
-  tournament_id NVARCHAR(20) PRIMARY KEY,
-  name NVARCHAR(255),
-  system NVARCHAR(20),
-  start_time DATETIME2,
+CREATE TABLE IF NOT EXISTS tournament (
+  tournament_id TEXT PRIMARY KEY,
+  name TEXT,
+  system TEXT,
+  start_time TEXT,
   player_count INT
 );
 
-IF OBJECT_ID('player', 'U') IS NULL
-CREATE TABLE player (
-  player_id NVARCHAR(50) PRIMARY KEY,
-  username NVARCHAR(50),
-  title NVARCHAR(10) NULL
+
+CREATE TABLE IF NOT EXISTS player (
+  player_id TEXT PRIMARY KEY,
+  username TEXT,
+  title TEXT NULL
 );
 
-IF OBJECT_ID('game', 'U') IS NULL
-CREATE TABLE game (
-  game_id NVARCHAR(20) PRIMARY KEY,
-  tournament_id NVARCHAR(20) NOT NULL,
-  white_id NVARCHAR(50) NOT NULL,
-  black_id NVARCHAR(50) NOT NULL,
-  winner NVARCHAR(10) NULL,
-  opening NVARCHAR(255) NULL,
+
+CREATE TABLE IF NOT EXISTS game (
+  game_id TEXT PRIMARY KEY,
+  tournament_id TEXT NOT NULL,
+  white_id TEXT NOT NULL,
+  black_id TEXT NOT NULL,
+  winner TEXT NULL,
+  opening TEXT NULL,
   move_count INT NULL,
   CONSTRAINT fk_game_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(tournament_id),
   CONSTRAINT fk_game_white FOREIGN KEY (white_id) REFERENCES player(player_id),
   CONSTRAINT fk_game_black FOREIGN KEY (black_id) REFERENCES player(player_id)
 );
 
-IF OBJECT_ID('standing', 'U') IS NULL
-CREATE TABLE standing (
-  tournament_id NVARCHAR(20) NOT NULL,
-  player_id NVARCHAR(50) NOT NULL,
-  [rank] INT,
+
+CREATE TABLE IF NOT EXISTS standing (
+  tournament_id TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  "rank" INT,
   points INT,
   CONSTRAINT pk_standing PRIMARY KEY (tournament_id, player_id),
   CONSTRAINT fk_standing_tournament FOREIGN KEY (tournament_id) REFERENCES tournament(tournament_id),
@@ -158,38 +107,20 @@ CREATE TABLE standing (
 );
 `;
 
-async function ensureSchema() {
-  // Step 1: create the database if it does not exist yet
-  const masterPool = new sql.ConnectionPool(masterConfig);
-  await masterPool.connect();
-  await masterPool.request().batch(
-    `IF DB_ID('${DB_NAME}') IS NULL CREATE DATABASE ${DB_NAME}`
-  );
-  await masterPool.close();
-
-  // Step 2: create the tables only if they are missing (keeps existing rows)
-  const appPool = new sql.ConnectionPool(appConfig);
-  await appPool.connect();
-  await appPool.request().batch(ensureSchemaSql);
-  await appPool.close();
-
-  console.log(`Database '${DB_NAME}' schema ensured (existing data kept).`);
+function ensureSchema() {
+  // Create the tables only if they are missing (keeps existing rows)
+  db.exec(ensureSchemaSql);
+  console.log(`Database schema ensured (existing data kept).`);
 }
 
 // Drop the whole database -> leaves no trace behind
 async function teardownDatabase() {
-  const masterPool = new sql.ConnectionPool(masterConfig);
-  await masterPool.connect();
-  await masterPool.request().batch(`
-    IF DB_ID('${DB_NAME}') IS NOT NULL
-    BEGIN
-      ALTER DATABASE ${DB_NAME} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-      DROP DATABASE ${DB_NAME};
-    END
-  `);
-  await masterPool.close();
-
-  console.log(`Database '${DB_NAME}' removed.`);
+  
+  db.close();
+  if (fs.existsSync(DB_File)) {
+    fs.unlinkSync(DB_File);
+  }
+  console.log(`Database removed.`);
 }
 
 
@@ -287,21 +218,72 @@ DROP TABLE stage_player;
 DROP TABLE stage_tournament;
 `;
 
-// Bulk load the four CSVs into staging, then merge into the real tables.
-async function mergeLoadCsvs() {
-  const pool = new sql.ConnectionPool(appConfig);
-  await pool.connect();
-  try {
-    await pool.request().batch(stageDdl);
-    await bulkLoad(pool, "stage_tournament", "tournament.csv");
-    await bulkLoad(pool, "stage_player", "player.csv");
-    await bulkLoad(pool, "stage_game", "game.csv");
-    await bulkLoad(pool, "stage_standing", "standing.csv");
-    await pool.request().batch(mergeSql);
-  } finally {
-    await pool.close();
+function insertTournament(t) {
+  const stmt = db.prepare(
+    "INSERT OR IGNORE INTO tournament (tournament_id, name, system, start_time, player_count) VALUES (?, ?, ?, ?, ?)"
+  );
+  stmt.run(t.tournament_id, t.name, t.system, t.start_time, t.player_count);
+}
+
+function insertTournaments(tournaments) {
+  for (const t of tournaments) {
+    insertTournament(t);
   }
-  console.log("Merge import complete.");
+}
+
+
+function insertPlayer(p) {
+  const stmt = db.prepare(
+    "INSERT OR IGNORE INTO player (player_id, username, title) VALUES (?, ?, ?)"
+  );
+  stmt.run(p.player_id, p.username, p.title);
+}
+
+function insertPlayers(players) {
+  for (const p of players) {
+    insertPlayer(p);
+  }
+}
+
+
+function insertGame(g) {
+  const stmt = db.prepare(
+    "INSERT OR IGNORE INTO game (game_id, tournament_id, white_id, black_id, winner, opening, move_count) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  )
+  stmt.run(g.game_id, g.tournament_id, g.white_id, g.black_id, g.winner, g.opening, g.move_count);
+}
+
+function insertGames(games) {
+  for (const g of games) {
+    insertGame(g);
+  }
+}
+
+
+function insertStanding(s) {
+  const stmt = db.prepare(
+    'INSERT OR IGNORE INTO standing (tournament_id, player_id, "rank", points) VALUES (?, ?, ?, ?)'
+  )
+  stmt.run(s.tournament_id, s.player_id, s.rank, s.points);
+}
+
+function insertStandings(standings) {
+  for (const s of standings) {
+    insertStanding(s);
+  }
+}
+
+
+// Bulk load the four CSVs into staging, then merge into the real tables.
+async function mergeImportData(tournaments, players, games, standings) {
+  const ExecImport = db.transaction((tournaments, players, games, standings) => {
+    insertTournaments(tournaments);
+    insertPlayers(players);
+    insertGames(games);
+    insertStandings(standings);
+  });  
+
+  ExecImport(tournaments, players, games, standings);
 }
 
 
@@ -360,7 +342,7 @@ async function exportData() {
 }
 
 
-export { setupDatabase, ensureSchema, teardownDatabase, bulkLoadCsvs, mergeLoadCsvs, verifyData, exportData };
+export { db, setupDatabase, ensureSchema, teardownDatabase, bulkLoadCsvs, mergeImportData, verifyData, exportData};
 
 
 
