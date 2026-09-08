@@ -281,6 +281,7 @@ async function mergeImportData(tournaments, players, games, standings) {
     insertPlayers(players);
     insertGames(games);
     insertStandings(standings);
+    // test
   });  
 
   ExecImport(tournaments, players, games, standings);
